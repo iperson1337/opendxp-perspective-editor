@@ -1,0 +1,354 @@
+<?php
+
+/**
+ * OpenDXP
+ *
+ * This source file is licensed under the GNU General Public License version 3 (GPLv3).
+ *
+ * Full copyright and license information is available in
+ * LICENSE.md which is distributed with this source code.
+ *
+ * @copyright  Copyright (c) Pimcore GmbH (https://pimcore.com)
+ * @copyright  Modification Copyright (c) OpenDXP (https://www.opendxp.io)
+ * @license    https://www.gnu.org/licenses/gpl-3.0.html  GNU General Public License version 3 (GPLv3)
+ */
+
+namespace OpenDxp\Bundle\PerspectiveEditorBundle\Controller;
+
+use Exception;
+use OpenDxp\Bundle\AdminBundle\Security\CsrfProtectionHandler;
+use OpenDxp\Bundle\PerspectiveEditorBundle\Event\ElementTree\IconEvents;
+use OpenDxp\Bundle\PerspectiveEditorBundle\Event\ElementTree\Model\IconAddEvent;
+use OpenDxp\Bundle\PerspectiveEditorBundle\OpenDxpPerspectiveEditorBundle;
+use OpenDxp\Bundle\PerspectiveEditorBundle\Services\PerspectiveAccessor;
+use OpenDxp\Bundle\PerspectiveEditorBundle\Services\TreeHelper;
+use OpenDxp\Bundle\PerspectiveEditorBundle\Services\ViewAccessor;
+use OpenDxp\Controller\UserAwareController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+/**
+ * Class PerspectiveController
+ *
+ * @package OpenDxp\Bundle\PerspectiveEditorBundle\Controller\Admin
+ */
+class PerspectiveController extends UserAwareController
+{
+    protected string $disabledCssClass = 'opendxp_tree_node_disabled';
+
+    public function __construct(
+        protected TranslatorInterface $translator,
+        protected EventDispatcherInterface $eventDispatcher
+    ) {
+    }
+
+    #[Route('/perspective/get-tree', name: 'get-perspective-tree')]
+    public function getPerspectiveTreeAction(PerspectiveAccessor $perspectiveAccessor, TreeHelper $treeHelper): JsonResponse
+    {
+        $this->checkPermission(OpenDxpPerspectiveEditorBundle::PERMISSION_PERSPECTIVE_EDITOR);
+
+        $tree = [];
+        $configuration = $perspectiveAccessor->getConfiguration();
+
+        if ($configuration) {
+            foreach ($configuration as $perspectiveName => $perspectiveConfig) {
+                $tree[] = $this->createPerspectiveEntry($treeHelper, $perspectiveName, $perspectiveConfig);
+            }
+        }
+
+        return new JsonResponse($tree);
+    }
+
+    #[Route('/view/get-tree', name: 'get-view-tree')]
+    public function getViewTreeAction(ViewAccessor $viewAccessor, TreeHelper $treeHelper): JsonResponse
+    {
+        $this->checkPermission(OpenDxpPerspectiveEditorBundle::PERMISSION_PERSPECTIVE_EDITOR);
+
+        $tree = [];
+
+        $configuration = $viewAccessor->getConfiguration();
+
+        if ($configuration) {
+            foreach ($configuration['views'] as $viewName => $viewConfig) {
+                $tree[] = $this->createViewEntry($treeHelper, $viewName, $viewConfig);
+            }
+        }
+
+        return new JsonResponse($tree);
+    }
+
+    #[Route('/perspective/update', name: 'update-perspective')]
+    public function updatePerspectivesAction(PerspectiveAccessor $perspectiveAccessor, Request $request, CsrfProtectionHandler $csrfProtectionHandler): JsonResponse
+    {
+        $csrfProtectionHandler->checkCsrfToken($request);
+        $this->checkPermission(OpenDxpPerspectiveEditorBundle::PERMISSION_PERSPECTIVE_EDITOR);
+
+        $ret = [
+            'success' => true,
+            'error' => null,
+        ];
+
+        try {
+            $treeStore = json_decode($request->request->getString('data'), true);
+            $deletedRecords = json_decode($request->request->getString('deletedRecords'), true);
+            $this->checkForUniqueElements($treeStore);
+
+            $perspectiveAccessor->writeConfiguration($treeStore, $deletedRecords);
+        } catch (Exception $e) {
+            $ret['success'] = false;
+            $ret['error'] = $e->getMessage();
+        }
+
+        return new JsonResponse($ret);
+    }
+
+    #[Route('/view/update', name: 'update-view')]
+    public function updateViewAction(ViewAccessor $viewAccessor, Request $request, CsrfProtectionHandler $csrfProtectionHandler): JsonResponse
+    {
+        $csrfProtectionHandler->checkCsrfToken($request);
+        $this->checkPermission(OpenDxpPerspectiveEditorBundle::PERMISSION_PERSPECTIVE_EDITOR);
+        $this->checkPermission(OpenDxpPerspectiveEditorBundle::PERMISSION_PERSPECTIVE_EDITOR_VIEW_EDIT);
+
+        $ret = [
+            'success' => true,
+            'error' => null,
+        ];
+
+        try {
+            $treeStore = json_decode($request->request->getString('data'), true);
+            $deletedRecords = json_decode($request->request->getString('deletedRecords'), true);
+            $viewAccessor->writeConfiguration($treeStore, $deletedRecords);
+        } catch (Exception $e) {
+            $ret = ['success' => false, 'error' => $e->getMessage()];
+        }
+
+        return new JsonResponse($ret);
+    }
+
+    protected function checkForUniqueElements(array $treeStore): void
+    {
+        foreach ($treeStore['children'] ?? [] as $perspective) {
+            $elementTree = array_values(array_filter($perspective['children'] ?? [], static fn ($entry) => $entry['type'] === 'elementTree' || $entry['type'] === 'elementTreeRight'));
+
+            if (empty($elementTree)) {
+                return;
+            }
+
+            $elementTrees = [];
+            foreach ($elementTree as $elementTreeItem) {
+                if (isset($elementTreeItem['children'])) {
+                    $elementTrees = array_merge($elementTrees, $elementTreeItem['children']);
+                }
+            }
+
+            foreach (['assets', 'documents', 'objects'] as $type) {
+                $elements = array_values(array_filter($elementTrees, static fn ($entry) => $entry['config']['type'] === $type));
+
+                if (count($elements) > 1) {
+                    throw new Exception('plugin_opendxp_perspectiveeditor_no_unique_treeelements');
+                }
+            }
+        }
+    }
+
+    protected function createPerspectiveEntry(TreeHelper $treeHelper, string $perspectiveName, array $perspectiveConfig): array
+    {
+        $leftElementTrees = $this->buildElementTree($treeHelper, $perspectiveConfig, 'left');
+        $rightElementTrees = $this->buildElementTree($treeHelper, $perspectiveConfig, 'right');
+        $disabledClass = $perspectiveConfig['writeable'] ? '' : $this->disabledCssClass;
+
+        return [
+            'id' => $treeHelper->createUuid(),
+            'text' => $perspectiveName,
+            'name' => $perspectiveName,
+            'type' => 'perspective',
+            'icon' => '/bundles/opendxpadmin/img/flat-color-icons/reading.svg',
+            'expanded' => false,
+            'allowDrag' => false,
+            'allowDrop' => false,
+            'cls' => $disabledClass,
+            'writeable' => $perspectiveConfig['writeable'],
+            'children' => [
+                [
+                    'id' => $treeHelper->createUuid(),
+                    'text' => 'icon',
+                    'type' => 'icon',
+                    'leaf' => true,
+                    'icon' => '/bundles/opendxpadmin/img/flat-color-icons/marker.svg',
+                    'allowDrag' => false,
+                    'allowDrop' => false,
+                    'cls' => $disabledClass,
+                    'writeable' => $perspectiveConfig['writeable'],
+                    'config' => [
+                        'iconCls' => $perspectiveConfig['iconCls'] ?? null,
+                        'icon' => $perspectiveConfig['icon'] ?? null,
+                    ],
+                ],
+                [
+                    'id' => $treeHelper->createUuid(),
+                    'text' => $this->translator->trans('plugin_opendxp_perspectiveeditor_elementTreeLeft', [], 'admin'),
+                    'type' => 'elementTree',
+                    'leaf' => false,
+                    'expanded' => !empty($leftElementTrees),
+                    'icon' => '/bundles/opendxpadmin/img/flat-color-icons/left_down2.svg',
+                    'allowDrag' => false,
+                    'allowDrop' => true,
+                    'cls' => $disabledClass,
+                    'writeable' => $perspectiveConfig['writeable'],
+                    'children' => $leftElementTrees,
+                ], [
+                    'id' => $treeHelper->createUuid(),
+                    'text' => $this->translator->trans('plugin_opendxp_perspectiveeditor_elementTreeRight', [], 'admin'),
+                    'type' => 'elementTreeRight',
+                    'leaf' => false,
+                    'expanded' => !empty($rightElementTrees),
+                    'icon' => '/bundles/opendxpadmin/img/flat-color-icons/right_down2.svg',
+                    'allowDrag' => false,
+                    'allowDrop' => true,
+                    'cls' => $disabledClass,
+                    'children' => $rightElementTrees,
+                    'writeable' => $perspectiveConfig['writeable'],
+                ],
+                [
+                    'id' => $treeHelper->createUuid(),
+                    'text' => $this->translator->trans('plugin_opendxp_perspectiveeditor_dashboard', [], 'admin'),
+                    'type' => 'dashboard',
+                    'leaf' => empty(array_diff(array_keys($perspectiveConfig['dashboards'] ?? []), ['disabledPortlets'])),
+                    'expanded' => !empty(array_diff(array_keys($perspectiveConfig['dashboards'] ?? []), ['disabledPortlets'])),
+                    'icon' => '/bundles/opendxpadmin/img/flat-color-icons/dashboard.svg',
+                    'config' => $perspectiveConfig['dashboards']['disabledPortlets'] ?? [],
+                    'allowDrag' => false,
+                    'allowDrop' => false,
+                    'cls' => $disabledClass,
+                    'writeable' => $perspectiveConfig['writeable'],
+                    'children' => $this->buildDashboardTree($treeHelper, $perspectiveConfig),
+                ],
+                [
+                    'id' => $treeHelper->createUuid(),
+                    'text' => $this->translator->trans('plugin_opendxp_perspectiveeditor_toolbar', [], 'admin'),
+                    'type' => 'toolbar',
+                    'leaf' => true,
+                    'icon' => '/bundles/opendxpadmin/img/flat-color-icons/support.svg',
+                    'allowDrag' => false,
+                    'allowDrop' => false,
+                    'cls' => $disabledClass,
+                    'writeable' => $perspectiveConfig['writeable'],
+                    'config' => $perspectiveConfig['toolbar'] ?? [],
+                ],
+            ],
+        ];
+    }
+
+    protected function buildElementTree(TreeHelper $treeHelper, array $config, string $position = 'left'): array
+    {
+        if (!isset($config['elementTree'])) {
+            return [];
+        }
+        $disabledClass = $config['writeable'] ? '' : $this->disabledCssClass;
+        $elementTreeIcons = $this->getElementTreeIcons();
+        $tree = [];
+        foreach ($config['elementTree'] as $element) {
+            if ($position === ($element['position'] ?? 'left')) {
+                $tree[] = [
+                    'id' => $treeHelper->createUuid(),
+                    'text' => preg_replace("/[\-_]/", ' ', (string) $element['type']),
+                    'type' => 'elementTreeElement',
+                    'leaf' => true,
+                    'allowDrag' => true,
+                    'iconCls' => $elementTreeIcons[$element['type']] ?? '',
+                    'config' => $element,
+                    'cls' => $disabledClass,
+                    'writeable' => $config['writeable'],
+                ];
+            }
+        }
+
+        usort($tree, fn ($item1, $item2) => ($item1['config']['sort'] ?? 0) - ($item2['config']['sort'] ?? 0));
+
+        return $tree;
+    }
+
+    /**
+     * get All Icons related to perspective element tree
+     */
+    private function getElementTreeIcons(): array
+    {
+        $elementTreeIcons = [
+            'documents' => 'opendxp_icon_document',
+            'assets' => 'opendxp_icon_asset',
+            'objects' => 'opendxp_icon_object',
+            'customview' => 'opendxp_icon_custom_views',
+        ];
+        $elementTreeIconAddEvent = new IconAddEvent($elementTreeIcons);
+        $this->eventDispatcher->dispatch($elementTreeIconAddEvent, IconEvents::ADD_ELEMENT_TREE_ICON);
+
+        return $elementTreeIconAddEvent->getElementTreeIcons();
+    }
+
+    protected function buildDashboardTree(TreeHelper $treeHelper, array $config): array
+    {
+        if (!isset($config['dashboards'])) {
+            return [];
+        }
+        $disabledClass = $config['writeable'] ? '' : $this->disabledCssClass;
+
+        $tree = [];
+        if (isset($config['dashboards']['predefined'])) {
+            foreach ($config['dashboards']['predefined'] as $dashboardName => $dashboardConfig) {
+                $tree[] = [
+                    'id' => $treeHelper->createUuid(),
+                    'text' => $dashboardName,
+                    'type' => 'dashboardDefinition',
+                    'leaf' => true,
+                    'allowDrag' => false,
+                    'allowDrop' => false,
+                    'iconCls' => 'opendxp_icon_welcome',
+                    'cls' => $disabledClass,
+                    'writeable' => $config['writeable'],
+                    'config' => array_merge($dashboardConfig, ['name' => $dashboardName]),
+                ];
+            }
+        }
+
+        return $tree;
+    }
+
+    protected function createViewEntry(TreeHelper $treeHelper, ?string $viewName = null, ?array $viewConfig = null): array
+    {
+        $viewName ??= 'new view ' . date('U');
+        $disabledClass = '';
+        if ($viewConfig) {
+            $disabledClass = $viewConfig['writeable'] ? '' : ' ' . $this->disabledCssClass;
+        }
+
+        $entry = [
+            'id' => $viewConfig['id'] ?? $treeHelper->createUuid(),
+            'text' => $viewConfig['name'] ?? $viewName,
+            'name' => 'view',
+            'type' => 'view',
+            'icon' => $viewConfig['icon'] ?? '/bundles/opendxpadmin/img/flat-color-icons/view_details.svg',
+            'cls' => 'plugin_opendxp_perspective_editor_custom_view_tree_item' . $disabledClass,
+            'leaf' => true,
+            'allowDrag' => true,
+            'writeable' => $viewConfig['writeable'],
+            'config' => $viewConfig ?? $this->getViewDefaultConfig($viewName),
+        ];
+
+        return $entry;
+    }
+
+    protected function getViewDefaultConfig(string $name): array
+    {
+        return [
+            'name' => $name,
+            'treetype' => 'document',
+            'position' => 'left',
+            'rootfolder' => '/',
+            'showroot' => false,
+            'sort' => 0,
+        ];
+    }
+}

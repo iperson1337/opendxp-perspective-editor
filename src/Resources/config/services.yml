@@ -1,0 +1,42 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+        bind:
+            $configDirectory: "%kernel.project_dir%/config/opendxp/"
+
+    OpenDxp\Bundle\PerspectiveEditorBundle\Controller\:
+        resource: '../../Controller'
+        public: true
+        tags: ['controller.service_arguments']
+
+    OpenDxp\Bundle\PerspectiveEditorBundle\Services\:
+        resource: '../../Services'
+
+    # Правила создания объектов: какие классы DataObject можно создавать в какой папке.
+    # Источник правил — SettingsStore (UI-вкладка «Правила создания объектов»),
+    # фоллбек — конфигурация бандла opendxp_perspective_editor.object_creation_rules.
+    OpenDxp\Bundle\PerspectiveEditorBundle\ObjectCreationRules\RulesProvider:
+        arguments:
+            $fallbackRules: '%opendxp_perspective_editor.object_creation_rules%'
+
+    # Матчер создаётся фабрикой, чтобы всегда работать с действующим набором правил
+    OpenDxp\Bundle\PerspectiveEditorBundle\ObjectCreationRules\RuleMatcher:
+        factory: ['@OpenDxp\Bundle\PerspectiveEditorBundle\ObjectCreationRules\RulesProvider', 'createMatcher']
+
+    # Backend-валидация PRE_ADD/PRE_UPDATE; bypass-checker'ы регистрирует приложение
+    # (autoconfiguration по BypassCheckerInterface, см. OpenDxpPerspectiveEditorExtension)
+    OpenDxp\Bundle\PerspectiveEditorBundle\ObjectCreationRules\CreationGuardSubscriber:
+        arguments:
+            $bypassCheckers: !tagged_iterator opendxp_perspective_editor.object_creation_rules.bypass_checker
+
+    # Инжект действующих правил в opendxp.settings.objectCreationRules (для menuFilter.js)
+    OpenDxp\Bundle\PerspectiveEditorBundle\ObjectCreationRules\AdminSettingsListener: ~
+
+
+    OpenDxp\Bundle\PerspectiveEditorBundle\Installer:
+        public: true
+        arguments:
+            # fetch the bundle via expression language
+            $bundle: "@=service('kernel').getBundle('OpenDxpPerspectiveEditorBundle')"

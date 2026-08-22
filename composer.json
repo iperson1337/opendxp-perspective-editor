@@ -1,0 +1,52 @@
+{
+    "name": "iperson1337/opendxp-perspective-editor",
+    "license": "GPL-3.0+",
+    "type": "opendxp-bundle",
+    "description": "OpenDXP Perspective Editor (fork: + Object Creation Rules editor)",
+    "config": {
+        "sort-packages": true,
+        "preferred-install": {
+            "open-dxp/opendxp": "source",
+            "*": "dist"
+        },
+        "allow-plugins": {
+            "symfony/runtime": true
+        }
+    },
+    "require": {
+        "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+        "open-dxp/admin-bundle": "^1.0",
+        "open-dxp/opendxp": "^1.0",
+        "symfony/http-foundation": "^7.4"
+    },
+    "require-dev": {
+        "symfony/dotenv": "^7.4",
+        "symfony/runtime": "^7.4",
+        "phpunit/phpunit": "^9.5",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0.14",
+        "codeception/codeception": "^5.3.5",
+        "codeception/module-symfony": "^3.1.1",
+        "codeception/module-asserts": "^2"
+    },
+    "autoload": {
+        "psr-4": {
+            "OpenDxp\\Bundle\\PerspectiveEditorBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OpenDxp\\Bundle\\PerspectiveEditorBundle\\Tests\\": "tests"
+        },
+        "files": [
+            "kernel/Kernel.php"
+        ]
+    },
+    "extra": {
+        "opendxp": {
+            "bundles": [
+                "OpenDxp\\Bundle\\PerspectiveEditorBundle\\OpenDxpPerspectiveEditorBundle"
+            ]
+        }
+    }
+}

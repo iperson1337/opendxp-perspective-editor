@@ -1,0 +1,4 @@
+admin:
+    resource: "@OpenDxpPerspectiveEditorBundle/Controller/"
+    type:     attribute
+    prefix:   /admin/perspectives-views
