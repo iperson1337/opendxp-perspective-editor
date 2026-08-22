@@ -74,7 +74,7 @@ class OpenDxpPerspectiveEditorBundle extends AbstractOpenDxpBundle implements Op
 
     protected function getComposerPackageName(): string
     {
-        return 'iperson1337/perspective-editor';
+        return 'iperson1337/opendxp-perspective-editor';
     }
 
     public function getInstaller(): InstallerInterface
