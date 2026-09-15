@@ -35,7 +35,10 @@ class Version20211213110000 extends BundleAwareMigration
 
     public function up(Schema $schema): void
     {
-        SettingsStore::set('BUNDLE_INSTALLED__OpenDxp\\Bundle\\PerspectiveEditorBundle\\OpenDxpPerspectiveEditorBundle', true, 'bool', 'pimcore');
+        // scope 'opendxp', не 'pimcore': id переименовали при порте, а аргумент scope — нет.
+        // SettingsStoreAwareInstaller::isInstalled() читает именно 'opendxp', поэтому со старым
+        // значением бандл навсегда числился неустановленным. Свип неймспейсов литералы не видит.
+        SettingsStore::set('BUNDLE_INSTALLED__OpenDxp\\Bundle\\PerspectiveEditorBundle\\OpenDxpPerspectiveEditorBundle', true, 'bool', 'opendxp');
 
         $this->addSql(sprintf("INSERT IGNORE INTO users_permission_definitions (`key`) VALUES('%s');", OpenDxpPerspectiveEditorBundle::PERMISSION_PERSPECTIVE_EDITOR_VIEW_EDIT));
     }
