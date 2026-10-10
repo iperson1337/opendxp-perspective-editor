@@ -226,7 +226,7 @@ class RuleMatcher
         }
 
         // Последний fallback: возвращаем техническое название и тоже кэшируем
-        if ($displayName === null || $displayName === '') {
+        if ($displayName === null) {
             $displayName = $className;
         }
 

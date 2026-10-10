@@ -98,7 +98,7 @@ class ObjectCreationRulesController extends UserAwareController
             $normalized['forbidden_parent_classes'] = $forbidden;
         }
 
-        if (isset($rule['depth']) && $rule['depth'] !== '' && $rule['depth'] !== null) {
+        if (isset($rule['depth']) && $rule['depth'] !== '') {
             $depth = (int)$rule['depth'];
             if ($depth < 0) {
                 $errors[] = sprintf('Правило #%d: depth не может быть отрицательным', $position);
