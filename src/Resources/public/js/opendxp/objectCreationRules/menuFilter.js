@@ -32,11 +32,11 @@
         if (currentPath === basePath) {
             return 0;
         }
-        var relative = currentPath.substring(basePath.length + 1);
+        var relative = currentPath.substring(basePath === '/' ? 1 : basePath.length + 1);
         return relative.split('/').length;
     }
 
-    // Зеркало App\Service\ObjectCreationRulesService::matchRule()
+    // Зеркало ObjectCreationRules\RuleMatcher::matchRule() — менять синхронно
     function matchRule(rules, folderPath, parentClassName) {
         folderPath = folderPath.replace(/\/+$/, '') || '/';
 
@@ -46,7 +46,8 @@
             var pathMatches = false;
 
             if (rule.recursive) {
-                if (folderPath === rulePath || folderPath.indexOf(rulePath + '/') === 0) {
+                // для корневого правила '/' префикс потомков — '/', а не '//'
+                if (folderPath === rulePath || folderPath.indexOf(rulePath.replace(/\/+$/, '') + '/') === 0) {
                     pathMatches = true;
                     if (typeof rule.depth === 'number'
                         && calculateDepth(folderPath, rulePath) !== rule.depth) {

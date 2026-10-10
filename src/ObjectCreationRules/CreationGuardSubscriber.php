@@ -9,6 +9,7 @@ use OpenDxp\Event\Model\DataObjectEvent;
 use OpenDxp\Model\DataObject\Concrete;
 use OpenDxp\Model\Element\ValidationException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Backend-валидация правил создания объектов: блокирует сохранение объекта
@@ -16,16 +17,27 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  * перемещение (drag&drop) в запрещённую папку.
  *
  * UI-фильтрация меню «Добавить объект» — Resources/public/js/opendxp/objectCreationRules/menuFilter.js.
+ *
+ * Матчер строится лениво и сбрасывается через kernel.reset (ResetInterface,
+ * autoconfigure): долгоживущий воркер Messenger сбрасывает сервисы после каждого
+ * сообщения и подхватывает правила, сохранённые из UI, без рестарта.
  */
-final class CreationGuardSubscriber implements EventSubscriberInterface
+final class CreationGuardSubscriber implements EventSubscriberInterface, ResetInterface
 {
+    private ?RuleMatcher $ruleMatcher = null;
+
     /**
      * @param iterable<BypassCheckerInterface> $bypassCheckers
      */
     public function __construct(
-        private readonly RuleMatcher $ruleMatcher,
+        private readonly RulesProvider $rulesProvider,
         private readonly iterable $bypassCheckers = [],
     ) {
+    }
+
+    public function reset(): void
+    {
+        $this->ruleMatcher = null;
     }
 
     public static function getSubscribedEvents(): array
@@ -64,9 +76,11 @@ final class CreationGuardSubscriber implements EventSubscriberInterface
             $parentClassName = $parent->getClassName();
         }
 
+        $ruleMatcher = $this->ruleMatcher ??= $this->rulesProvider->createMatcher();
+
         // Проверяем с учётом класса родителя
-        if (!$this->ruleMatcher->isClassAllowed($folderPath, $className, $parentClassName)) {
-            $message = $this->ruleMatcher->getValidationMessage($folderPath, $className, $parentClassName);
+        if (!$ruleMatcher->isClassAllowed($folderPath, $className, $parentClassName)) {
+            $message = $ruleMatcher->getValidationMessage($folderPath, $className, $parentClassName);
 
             // Останавливаем распространение события, чтобы другие подписчики не обошли валидацию
             $event->stopPropagation();

@@ -21,7 +21,8 @@ services:
         arguments:
             $fallbackRules: '%opendxp_perspective_editor.object_creation_rules%'
 
-    # Матчер создаётся фабрикой, чтобы всегда работать с действующим набором правил
+    # Матчер поверх действующих правил — для приложения; CreationGuardSubscriber
+    # строит свой через RulesProvider и сбрасывает его по kernel.reset
     OpenDxp\Bundle\PerspectiveEditorBundle\ObjectCreationRules\RuleMatcher:
         factory: ['@OpenDxp\Bundle\PerspectiveEditorBundle\ObjectCreationRules\RulesProvider', 'createMatcher']
 

@@ -55,7 +55,8 @@ class RuleMatcher
             // Проверка совпадения пути
             $pathMatches = false;
             if ($rule['recursive']) {
-                if ($folderPath === $rulePath || str_starts_with($folderPath, $rulePath . '/')) {
+                // rtrim: для корневого правила '/' префикс потомков — '/', а не '//'
+                if ($folderPath === $rulePath || str_starts_with($folderPath, rtrim($rulePath, '/') . '/')) {
                     $pathMatches = true;
 
                     // Если указана глубина, проверяем её
