@@ -3,7 +3,7 @@
 
 1. Install the required dependencies:
 ```bash
-composer require open-dxp/perspective-editor-bundle
+composer require iperson1337/opendxp-perspective-editor
 ```
 
 2. Make sure the bundle is enabled in the `config/bundles.php` file. The following lines should be added:
