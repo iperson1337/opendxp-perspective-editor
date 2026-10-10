@@ -8,9 +8,6 @@
         "preferred-install": {
             "open-dxp/opendxp": "source",
             "*": "dist"
-        },
-        "allow-plugins": {
-            "symfony/runtime": true
         }
     },
     "require": {
@@ -20,14 +17,9 @@
         "symfony/http-foundation": "^7.4"
     },
     "require-dev": {
-        "symfony/dotenv": "^7.4",
-        "symfony/runtime": "^7.4",
-        "phpunit/phpunit": "^9.5",
         "phpstan/phpstan": "^2.0",
         "phpstan/phpstan-symfony": "^2.0.14",
-        "codeception/codeception": "^5.3.5",
-        "codeception/module-symfony": "^3.1.1",
-        "codeception/module-asserts": "^2"
+        "phpunit/phpunit": "^11.5 || ^12.0"
     },
     "autoload": {
         "psr-4": {
@@ -36,11 +28,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "OpenDxp\\Bundle\\PerspectiveEditorBundle\\Tests\\": "tests"
-        },
-        "files": [
-            "kernel/Kernel.php"
-        ]
+            "OpenDxp\\Bundle\\PerspectiveEditorBundle\\Tests\\": "tests/"
+        }
     },
     "extra": {
         "opendxp": {

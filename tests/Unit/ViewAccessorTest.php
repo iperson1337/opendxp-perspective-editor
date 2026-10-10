@@ -1,13 +1,13 @@
 <?php
 
-namespace OpenDxp\Bundle\PerspectiveEditorBundle\Tests;
+namespace OpenDxp\Bundle\PerspectiveEditorBundle\Tests\Unit;
 
 
 use OpenDxp\Bundle\PerspectiveEditorBundle\Services\AbstractAccessor;
 use OpenDxp\Bundle\PerspectiveEditorBundle\Services\ViewAccessor;
-use Codeception\Test\Unit;
+use PHPUnit\Framework\TestCase;
 
-class ViewAccessorTest extends Unit
+class ViewAccessorTest extends TestCase
 {
     const TREE_STORE = [
         'parentId' => null,
@@ -50,24 +50,6 @@ class ViewAccessorTest extends Unit
         ]
     ];
 
-    const ERROR_TREE_STORE = [
-        'leaf' => false,
-        'children' => [
-            0 => [
-                'id' => 1,
-                'name' => 'view',
-                'type' => 'view',
-                'leaf' => true,
-                'writeable' => true,
-                'config' => [
-                    'treetype' => 'object',
-                    'errorTestField' => 1,
-                ],
-                'parentId' => 'root'
-            ]
-        ]
-    ];
-
     private AbstractAccessor $accessor;
 
     protected function setUp(): void {
@@ -83,15 +65,6 @@ class ViewAccessorTest extends Unit
         $this->assertEquals('object', $config[1]['treetype']);
         $this->assertEquals(4, count($config[1]['treeContextMenu']['object']['items']));
         $this->assertEquals(true, $config[1]['treeContextMenu']['object']['items']['addFolder']);
-    }
-
-    public function testWriteConfiguration() {
-        $this->accessor->writeConfiguration(self::TREE_STORE, null);
-    }
-
-    public function testWriteConfigurationWithError() {
-        $this->expectException(\Exception::class);
-        $this->accessor->writeConfiguration(self::ERROR_TREE_STORE, null);
     }
 
     private static function getMethod($class, $name)

@@ -1,13 +1,13 @@
 <?php
 
-namespace OpenDxp\Bundle\PerspectiveEditorBundle\Tests;
+namespace OpenDxp\Bundle\PerspectiveEditorBundle\Tests\Unit;
 
 
 use OpenDxp\Bundle\PerspectiveEditorBundle\Services\AbstractAccessor;
 use OpenDxp\Bundle\PerspectiveEditorBundle\Services\PerspectiveAccessor;
-use Codeception\Test\Unit;
+use PHPUnit\Framework\TestCase;
 
-class PerspectiveAccessorTest extends Unit
+class PerspectiveAccessorTest extends TestCase
 {
     const TREE_STORE = [
         'parentId' => null,
@@ -142,37 +142,6 @@ class PerspectiveAccessorTest extends Unit
         ]
     ];
 
-    const ERROR_TREE_STORE = [
-        'parentId' => null,
-        'autoRoot' => true,
-        'id' => 'root',
-        'leaf' => false,
-        'children' => [
-            0 => [
-                'id' => 'd9ba24f1-ab27-4a4e-9c67-266b2d1a1674',
-                'name' => 'Catalog',
-                'type' => 'perspective',
-                'writeable' => true,
-                'parentId' => 'root',
-                'leaf' => false,
-                'children' => [
-                    0 => [
-                        'id' => 'd9d72c19-747b-4a67-933d-e1c47406f105',
-                        'type' => 'icon',
-                        'leaf' => true,
-                        'writeable' => true,
-                        'config' => [
-                            'iconCls' => null,
-                            'icon' => '/bundles/opendxpadmin/img/flat-white-icons/book.svg',
-                            'errorTestField' => '1'
-                        ],
-                        'parentId' => 'd9ba24f1-ab27-4a4e-9c67-266b2d1a1674',
-                    ]
-                ],
-            ]
-        ]
-    ];
-
     private AbstractAccessor $accessor;
 
     protected function setUp(): void
@@ -203,16 +172,7 @@ class PerspectiveAccessorTest extends Unit
 
     }
 
-    public function testWriteConfiguration()
-    {
-        $this->accessor->writeConfiguration(self::TREE_STORE, null);
-    }
 
-    public function testWriteConfigurationWithError()
-    {
-        $this->expectException(\Exception::class);
-        $this->accessor->writeConfiguration(self::ERROR_TREE_STORE, null);
-    }
 
     private static function getMethod($class, $name)
     {

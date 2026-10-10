@@ -21,6 +21,7 @@ nbproject
 /app/config/parameters.yml
 /build/
 /phpunit.xml
+/.phpunit.cache/
 /web/bundles/
 /web/var/
 
