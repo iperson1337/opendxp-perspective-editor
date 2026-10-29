@@ -1,5 +1,10 @@
 # Update Notes
 
+## 1.1.1 (fork `iperson1337/opendxp-perspective-editor`)
+Use 1.1.1, not 1.1.0: the fork's tag `v1.1.0` was pushed by mistake pointing at the upstream commit
+(upstream code without this fork's additions, e.g. Object Creation Rules). 1.1.1 is the release
+described below.
+
 ## 1.1.0 (fork `iperson1337/opendxp-perspective-editor`)
 Synced with upstream [open-dxp/perspective-editor-bundle v1.1.0](https://github.com/open-dxp/perspective-editor-bundle/blob/1.x/CHANGELOG.md):
 * [BUGFIX] `config:dump-reference` and the configuration errors show the key `opendxp_perspective_editor` (the tree root was still named `perspective_editor`; the bundle config key itself was already `opendxp_perspective_editor`, nothing to change in projects).
