@@ -40,7 +40,7 @@ It adds features described in [Fork Additions](#fork-additions).
 ***
 
 ## Upstream Origin & Version Transparency
-This package is a fork of [open-dxp/perspective-editor-bundle v1.0.2 (602f18e)](https://github.com/open-dxp/perspective-editor-bundle/tree/602f18e9c8165be01636606e028b1916ce638f86).
+This package is a fork of [open-dxp/perspective-editor-bundle v1.0.2 (602f18e)](https://github.com/open-dxp/perspective-editor-bundle/tree/602f18e9c8165be01636606e028b1916ce638f86), with the code changes of upstream v1.1.0 (up to 7f77b33) ported in fork release 1.1.0.
 That project is itself a fork of the [Pimcore perspective-editor (579aa8a / v1.8.1)](https://github.com/pimcore/perspective-editor/tree/579aa8a6fb63cc66ba62bfdfebf699711739d143), which is © Pimcore GmbH and licensed under GPLv3.
 
 ## License

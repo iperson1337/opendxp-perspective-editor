@@ -27,7 +27,7 @@ class Configuration implements ConfigurationInterface
 {
     public function getConfigTreeBuilder(): TreeBuilder
     {
-        $treeBuilder = new TreeBuilder('perspective_editor');
+        $treeBuilder = new TreeBuilder('opendxp_perspective_editor');
 
         $treeBuilder->getRootNode()
             ->children()
